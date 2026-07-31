@@ -10,6 +10,7 @@ import Budget from './pages/Budget'
 import Safety from './pages/Safety'
 import AiPage from './pages/AiPage'
 import QualityControl from './pages/QualityControl'
+import Meetings from './pages/Meetings'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/projects" element={<Projects />} />
           <Route path="/findings" element={<Findings />} />
           <Route path="/worklog" element={<WorkLog />} />
+          <Route path="/meetings" element={<Meetings />} />
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/documents" element={<Documents />} />
           <Route path="/budget" element={<Budget />} />

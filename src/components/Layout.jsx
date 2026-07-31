@@ -3,8 +3,8 @@ import { Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FolderOpen, Camera, BookOpen,
   CheckSquare, DollarSign, FileText, Shield,
-  ChevronLeft, ChevronRight, MessageSquare, Bell, User,
-  HardHat, ClipboardCheck
+  ChevronLeft, ChevronRight, MessageSquare, Bell,
+  HardHat, ClipboardCheck, Users
 } from 'lucide-react'
 
 const NAV = [
@@ -13,8 +13,9 @@ const NAV = [
   { to: '/findings', icon: Camera, label: 'ממצאים' },
   { to: '/qc', icon: ClipboardCheck, label: 'בקרת איכות' },
   { to: '/worklog', icon: BookOpen, label: 'יומן עבודה' },
+  { to: '/meetings', icon: Users, label: 'פגישות' },
   { to: '/tasks', icon: CheckSquare, label: 'משימות' },
-  { to: '/documents', icon: FileText, label: 'מסמכים' },
+  { to: '/documents', icon: FileText, label: 'תוכניות ומסמכים' },
   { to: '/budget', icon: DollarSign, label: 'תקציב' },
   { to: '/safety', icon: Shield, label: 'בטיחות' },
   { to: '/ai', icon: MessageSquare, label: 'מוח הבנייה' },
@@ -38,9 +39,10 @@ export default function Layout({ children }) {
             <HardHat size={16} className="text-white" />
           </div>
           {!collapsed && (
-            <span className="font-bold text-sm text-white whitespace-nowrap">
-              פיקוח בנייה
-            </span>
+            <div>
+              <div className="font-bold text-sm text-white whitespace-nowrap">פיקוח בנייה</div>
+              <div className="text-xs text-slate-500 whitespace-nowrap">חיים עזרא</div>
+            </div>
           )}
         </div>
 
