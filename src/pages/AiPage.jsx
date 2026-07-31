@@ -35,12 +35,6 @@ function Bubble({ msg }) {
   )
 }
 
-const AI_DEMO_REPLIES = [
-  'על פי ת"י 466, המרחק המרבי בין מוטות ברזל ב-12 מ"מ צריך להיות 15 ס"מ. ממצא #12 שלך (18 ס"מ) חורג ב-20% — זה ממצא קריטי שדורש תיקון לפני יציקה.',
-  'בדוח ביקורת שטח סטנדרטי, ממצא מסוג זה מסווג תחת "חריגה מתוכנית" ויש לתעד אותו עם: מיקום מדויק, תמונה, מידה שנמדדה מול נדרשת, ועדיפות תיקון לפני אישור להמשך.',
-  'לפי ת"י 1555, אריחים מתנפחים בדרך כלל מצביעים על: לחות מתחת (waterproofing לקוי), הדבקה לא נכונה, או מרווחי התפשטות לא מספיקים. אני ממליץ לבדוק את ה-waterproofing של הקומה שמתחת.',
-]
-let demoIdx = 0
 
 export default function AiPage() {
   const [messages, setMessages] = useState([{ role: 'assistant', content: WELCOME }])
@@ -56,18 +50,45 @@ export default function AiPage() {
 
   async function send() {
     if (!input.trim() && !imgPreview) return
-    const userMsg = { role: 'user', content: input, image: imgPreview }
-    setMessages(m => [...m, userMsg])
+
+    // Convert image blob URL → base64 before sending to server
+    let imageBase64 = null
+    if (imgPreview) {
+      const res = await fetch(imgPreview)
+      const blob = await res.blob()
+      imageBase64 = await new Promise(resolve => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result)
+        reader.readAsDataURL(blob)
+      })
+    }
+
+    const userMsg = { role: 'user', content: input, image: imageBase64 }
+    const newMessages = [...messages, userMsg]
+    setMessages(newMessages)
     setInput('')
     setImgPreview(null)
     setLoading(true)
 
-    // Demo mode — replace with real API call to your Streamlit backend
-    await new Promise(r => setTimeout(r, 1200))
-    const reply = AI_DEMO_REPLIES[demoIdx % AI_DEMO_REPLIES.length]
-    demoIdx++
-    setMessages(m => [...m, { role: 'assistant', content: reply }])
-    setLoading(false)
+    try {
+      // Send only role+content+image to server (skip welcome message which has no role pair)
+      const history = newMessages
+        .filter(m => m.content && m.content !== WELCOME)
+        .map(m => ({ role: m.role, content: m.content, image: m.image || null }))
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ messages: history }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'שגיאת שרת')
+      setMessages(m => [...m, { role: 'assistant', content: data.content }])
+    } catch (err) {
+      setMessages(m => [...m, { role: 'assistant', content: `שגיאה: ${err.message}` }])
+    } finally {
+      setLoading(false)
+    }
   }
 
   function handleImg(e) {
