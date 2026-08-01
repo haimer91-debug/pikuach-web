@@ -1,315 +1,457 @@
 import { useState } from 'react'
-import { Plus, X, Download, Users, Calendar, MapPin, CheckSquare, Clock, ChevronDown, ChevronRight, Printer } from 'lucide-react'
+import { Plus, X, Download, Users, Check, Clock, ChevronLeft, Trash2 } from 'lucide-react'
 
-const INIT_MEETINGS = [
+// ─── demo data ────────────────────────────────────────────────────────────────
+const DEMO_MEETINGS = [
   {
     id: '1',
-    date: '2025-07-29',
-    time: '10:00',
-    project: 'פרויקט רמות - בניין A',
-    subject: 'סיכום שבועי — שלב שלד קומה 3',
-    location: 'משרד הקבלן באתר',
-    participants: ['חיים עזרא (מפקח)', 'אבי כהן (מנהל עבודה)', 'שלמה לוי (בעל בית)', 'יוסי גולן (מהנדס קונסטרוקציה)'],
-    summary: 'נסקרה התקדמות יציקת התקרה קומה 3. הסתיימה ב-100% לפי לוח הזמנים. נדגמו 3 קוביות בטון ונשלחו למעבדה.',
-    decisions: [
-      'יציקת עמודים קומה 4 תחל ב-5.8.25',
-      'ממצא #13 (סדקי טיח) יטופל עד 8.8.25 ע"י קבלן הטיח',
-      'בדיקת תוצאות קוביות בטון — עד 7.8.25',
+    title: 'פגישה שבועית',
+    project: 'סוקולוב 35',
+    date: '2026-07-30',
+    participants: [
+      { name: 'חיים עזרא',      role: 'מפקח',             company: 'חברת פיקוח',   email: 'haimezra.pm@gmail.com' },
+      { name: "סארי ג'לג'ולה", role: 'מהנדס ביצוע',      company: 'חברה קבלנית', email: 'Sari91j@gmail.com' },
+      { name: 'אחסן',            role: 'קבלן ראשי',        company: '',              email: 'jtb.ahsan@gmail.com' },
+      { name: 'אוראל בן אור',   role: 'מנהל',             company: 'חברת ביתא',   email: 'orel@mybeita.com' },
+      { name: 'תום שנדור',       role: 'מנהל פרויקטים',   company: 'חברת ביתא',   email: 'tom@mybeita.com' },
     ],
-    action_items: [
-      { task: 'קבלת תוצאות קוביות בטון מהמעבדה', responsible: 'חיים עזרא', deadline: '2025-08-07', done: false },
-      { task: 'תיאום קבלן טיח לתיקון ממצא #13', responsible: 'אבי כהן', deadline: '2025-08-05', done: false },
-      { task: 'הזמנת ברזל לקומה 4', responsible: 'אבי כהן', deadline: '2025-08-02', done: true },
+    cc: [
+      { name: 'אופק מאיר', role: 'מנהל', company: 'חברת ביתא', email: 'ofek@mybeita.com' },
     ],
-    next_meeting: '2025-08-05',
+    status_notes: [
+      'נתיבים קריטיים: הטמנת קו חשמל, קידום אישורים ובדיקות לטופס 4',
+      'סטטוס עבודות הגמר — הכנת דירות למסירות, השלמות מטבחים, עבודות פיתוח',
+    ],
+    items: [
+      { id:'i1',  number:'1',   topic:'לוז הפרויקט',             description:'מועד מסירה חוזי 04/01/26. הפרויקט בעיכוב של 7 חודשים (5 עיכוב + 2 גרייס). יש לפעול בדחיפות לצמצום הלוז.', responsible:"סארי ג'לג'ולה", deadline:'מיידי',    status:'open', section:false },
+      { id:'i2',  number:'2',   topic:'נתיבים קריטיים למעקב יומי', description:'',                                              responsible:'',                                                 deadline:'',         status:'open', section:true  },
+      { id:'i3',  number:'2.1', topic:'הטמנת קו חשמל',            description:"עבר לאישור משטרה. צפי קבלת היתר בימים הקרובים.", responsible:"חיים עזרא, תום שנדור, סארי ג'לג'ולה",             deadline:'03/08/26',  status:'open', section:false },
+      { id:'i4',  number:'2.2', topic:'חניון פרקומט',              description:'הוזמן שער כניסה, צפי 28/08/26.',                 responsible:"סארי ג'לג'ולה",                                   deadline:'28/08/26',  status:'open', section:false },
+      { id:'i5',  number:'2.3', topic:'התקנת אלומיניום',           description:"ויטרינה כניסה לובי — טרם בוצע. תנאי לחתימת יועץ בטיחות על א'2 ולקביעת מועד ביקורת כיבוי אש.", responsible:"סארי ג'לג'ולה",                                   deadline:'10/08/26',  status:'open', section:false },
+      { id:'i6',  number:'3',   topic:'ביצוע',                     description:'',                                              responsible:'',                                                 deadline:'',          status:'open', section:true  },
+      { id:'i7',  number:'3.1', topic:'ניקוז חצר אנגלי',          description:'מפרט אושר ע"י יועץ אינסטלציה וקונסטרוקטור. יש להתקדם בעבודות.', responsible:"סארי ג'לג'ולה",                  deadline:'06/08/26',  status:'open', section:false },
+      { id:'i8',  number:'3.2', topic:'הכנות למסירה סופית',        description:'נגרר לאוגוסט. יש למלא אחר דוח הליקויים שצורף. תיבות דואר טרם נבחרו.', responsible:"סארי ג'לג'ולה",            deadline:'שוטף',     status:'open', section:false },
+      { id:'i9',  number:'3.9', topic:'השלמת מטבחים וחיפויים',    description:'דירות 8,9 מטבח יותקן סוף אוגוסט. יתר הדירות — נותר לבצע חיפויים.', responsible:"סארי ג'לג'ולה",               deadline:'לידיעה',   status:'open', section:false },
+      { id:'i10', number:'4',   topic:'טופס 4',                    description:'',                                              responsible:'',                                                 deadline:'',          status:'open', section:true  },
+      { id:'i11', number:'4.1', topic:'כיבוי אש',                  description:'אינטגרציה ממתינה לתעודה. גלגולנים 2206 — בדיקה חוזרת 29/07 ללא אישור. גז — חייבים להקדים ל-10/08. גנרטור — אישור צפוי 30/08.', responsible:"סארי ג'לג'ולה", deadline:'מיידי',    status:'open', section:false },
+      { id:'i12', number:'4.2', topic:'מי אביבים',                  description:"שלב א' אושר, ממתינים לבדיקת שלב ב'. להשלים הצהרת יזם.", responsible:"סארי ג'לג'ולה, תום שנדור",          deadline:'מיידי',    status:'open', section:false },
+      { id:'i13', number:'4.5', topic:'עירייה',                    description:'הושלמו 6/33 משימות. אין התקדמות — חייבים להתחיל לקדם.', responsible:"סארי ג'לג'ולה, תום שנדור, חיים עזרא",  deadline:'שוטף',     status:'open', section:false },
+    ],
   },
 ]
 
-function badge(text, color) {
-  const map = {
-    green: 'bg-green-500/20 text-green-400 border-green-500/30',
-    red: 'bg-red-500/20 text-red-400 border-red-500/30',
-    yellow: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-    blue: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  }
-  return <span className={`text-xs px-2 py-0.5 rounded border ${map[color]}`}>{text}</span>
+// ─── utils ────────────────────────────────────────────────────────────────────
+const inp = 'w-full bg-[#1e2130] border border-[#252840] rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-green-600'
+const sm  = 'bg-[#1e2130] border border-[#252840] rounded px-2 py-1.5 text-xs text-white placeholder-slate-600 outline-none focus:border-green-600'
+
+function fmtDate(d) {
+  try { return new Date(d).toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit',year:'numeric'}) } catch { return d }
 }
 
-function NewMeetingModal({ onClose, onSave }) {
-  const [form, setForm] = useState({
-    date: new Date().toISOString().split('T')[0],
-    time: '10:00',
-    project: 'פרויקט רמות - בניין A',
-    subject: '',
-    location: '',
-    participantsRaw: '',
-    summary: '',
-    decisionsRaw: '',
-    next_meeting: '',
+function exportMeeting(m) {
+  const L = []
+  L.push(`סיכום פגישה שבועית — ${m.project}`)
+  L.push(`תאריך: ${fmtDate(m.date)}`)
+  L.push('')
+  L.push('משתתפים:')
+  m.participants.forEach(p => L.push(`  ${p.name} — ${p.role}${p.company?', '+p.company:''} | ${p.email}`))
+  if (m.cc?.length) { L.push('מכותבים:'); m.cc.forEach(p => L.push(`  ${p.name} — ${p.role}, ${p.company}`)) }
+  L.push('')
+  L.push('סטטוס:')
+  m.status_notes?.forEach(n => L.push(`  • ${n}`))
+  L.push('')
+  L.push('='.repeat(80))
+  L.push(`#       נושא                    תיאור                              לטיפול          עד תאריך`)
+  L.push('='.repeat(80))
+  m.items.forEach(item => {
+    if (item.section) { L.push(''); L.push(`${item.number}  ${item.topic}`); return }
+    L.push(`${item.number.padEnd(8)}${item.topic.padEnd(24)}${(item.description||'').substring(0,35).padEnd(35)} ${item.responsible.padEnd(16)} ${item.deadline}`)
+    if ((item.description||'').length > 35) L.push(`${''.padEnd(33)}${item.description.substring(35)}`)
   })
-  const [actionItems, setActionItems] = useState([{ task: '', responsible: '', deadline: '', done: false }])
+  L.push('='.repeat(80))
+  L.push(`\nהופק: חיים עזרא · ${new Date().toLocaleString('he-IL')}`)
+  const blob = new Blob([L.join('\n')],{type:'text/plain;charset=utf-8'})
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob)
+  a.download = `סיכום_${m.project}_${m.date}.txt`; a.click()
+}
 
-  function addAction() { setActionItems(a => [...a, { task: '', responsible: '', deadline: '', done: false }]) }
-  function updateAction(i, field, val) {
-    setActionItems(a => a.map((item, idx) => idx === i ? { ...item, [field]: val } : item))
+// ─── MeetingDetail (slide-in panel) ──────────────────────────────────────────
+function MeetingDetail({ meeting, onClose, onUpdate }) {
+  const [items, setItems] = useState(meeting.items)
+
+  function toggle(id) {
+    const next = items.map(i => i.id===id ? {...i, status: i.status==='open'?'done':'open'} : i)
+    setItems(next); onUpdate({...meeting, items: next})
   }
 
-  function save() {
-    if (!form.subject.trim()) return
-    onSave({
-      id: Date.now().toString(),
-      ...form,
-      participants: form.participantsRaw.split('\n').map(s => s.trim()).filter(Boolean),
-      decisions: form.decisionsRaw.split('\n').map(s => s.trim()).filter(Boolean),
-      action_items: actionItems.filter(a => a.task.trim()),
-    })
-    onClose()
-  }
-
-  const inp = 'w-full bg-[#1e2130] border border-[#252840] rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-green-600'
-  const lbl = 'text-xs text-slate-400 mb-1 block'
+  const nonSection = items.filter(i=>!i.section)
+  const done = nonSection.filter(i=>i.status==='done').length
+  const pct  = nonSection.length ? Math.round(done/nonSection.length*100) : 0
 
   return (
-    <div className="fixed inset-0 bg-black/75 z-50 flex items-start justify-center p-4 overflow-y-auto" onClick={onClose}>
-      <div className="bg-[#13161f] border border-[#1e2130] rounded-2xl p-6 max-w-2xl w-full my-4" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-white text-lg font-bold">פגישה חדשה</h2>
-          <button onClick={onClose}><X size={20} className="text-slate-500 hover:text-white" /></button>
+    <div className="fixed inset-0 bg-black/70 z-40 flex justify-end" onClick={onClose}>
+      <div className="w-full max-w-3xl bg-[#0f1117] border-r border-[#1e2130] h-full flex flex-col overflow-hidden" onClick={e=>e.stopPropagation()}>
+        {/* header */}
+        <div className="sticky top-0 bg-[#13161f] border-b border-[#1e2130] px-5 py-3 flex items-center gap-3 z-10 shrink-0">
+          <button onClick={onClose} className="text-slate-400 hover:text-white"><ChevronLeft size={20}/></button>
+          <div className="flex-1 min-w-0">
+            <div className="text-white font-bold truncate">{meeting.title} — {meeting.project}</div>
+            <div className="text-slate-500 text-xs">{fmtDate(meeting.date)}</div>
+          </div>
+          <span className="text-xs text-slate-500">{done}/{nonSection.length} הושלמו</span>
+          <button onClick={()=>exportMeeting({...meeting,items})}
+            className="flex items-center gap-1 bg-[#1e2130] hover:bg-[#252840] border border-[#374151] text-slate-400 hover:text-white text-xs px-3 py-1.5 rounded-lg">
+            <Download size={12}/> ייצא
+          </button>
         </div>
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-3">
-            <div><label className={lbl}>תאריך</label><input type="date" value={form.date} onChange={e => setForm(f=>({...f,date:e.target.value}))} className={inp} /></div>
-            <div><label className={lbl}>שעה</label><input type="time" value={form.time} onChange={e => setForm(f=>({...f,time:e.target.value}))} className={inp} /></div>
-            <div><label className={lbl}>פגישה הבאה</label><input type="date" value={form.next_meeting} onChange={e => setForm(f=>({...f,next_meeting:e.target.value}))} className={inp} /></div>
-          </div>
-          <div><label className={lbl}>נושא הפגישה</label><input value={form.subject} onChange={e => setForm(f=>({...f,subject:e.target.value}))} placeholder="סיכום שבועי — שלב ריצוף..." className={inp} /></div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className={lbl}>פרויקט</label><input value={form.project} onChange={e => setForm(f=>({...f,project:e.target.value}))} className={inp} /></div>
-            <div><label className={lbl}>מיקום</label><input value={form.location} onChange={e => setForm(f=>({...f,location:e.target.value}))} placeholder="משרד הקבלן / אתר" className={inp} /></div>
-          </div>
-          <div><label className={lbl}>משתתפים (שורה לכל אחד)</label><textarea rows={3} value={form.participantsRaw} onChange={e => setForm(f=>({...f,participantsRaw:e.target.value}))} placeholder={"חיים עזרא (מפקח)\nאבי כהן (מנהל עבודה)\nשלמה לוי (בעל בית)"} className={inp+' resize-none'} /></div>
-          <div><label className={lbl}>סיכום הפגישה</label><textarea rows={4} value={form.summary} onChange={e => setForm(f=>({...f,summary:e.target.value}))} placeholder="תיאור מה הוחלט ומה נדון..." className={inp+' resize-none'} /></div>
-          <div><label className={lbl}>החלטות (שורה לכל אחת)</label><textarea rows={3} value={form.decisionsRaw} onChange={e => setForm(f=>({...f,decisionsRaw:e.target.value}))} placeholder={"יציקה תחל ב-5.8\nממצא #13 יטופל עד 8.8"} className={inp+' resize-none'} /></div>
-
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className={lbl.replace('mb-1','')}>משימות לביצוע</label>
-              <button onClick={addAction} className="text-xs text-green-400 hover:text-green-300">+ הוסף</button>
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* Meta */}
+          <div className="bg-[#13161f] border border-[#1e2130] rounded-xl p-4 space-y-3">
+            <div>
+              <div className="text-xs text-slate-500 mb-2">משתתפים</div>
+              <div className="flex flex-wrap gap-2">
+                {meeting.participants.map((p,i)=>(
+                  <div key={i} className="bg-[#1a1d27] border border-[#252840] rounded-lg px-3 py-1.5 text-xs">
+                    <div className="text-white font-medium">{p.name}</div>
+                    <div className="text-slate-500">{p.role}{p.company?` · ${p.company}`:''}</div>
+                    <div className="text-slate-600 text-[10px]" dir="ltr">{p.email}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="space-y-2">
-              {actionItems.map((a, i) => (
-                <div key={i} className="grid grid-cols-3 gap-2">
-                  <input value={a.task} onChange={e => updateAction(i,'task',e.target.value)} placeholder="משימה" className={inp} />
-                  <input value={a.responsible} onChange={e => updateAction(i,'responsible',e.target.value)} placeholder="אחראי" className={inp} />
-                  <input type="date" value={a.deadline} onChange={e => updateAction(i,'deadline',e.target.value)} className={inp} />
-                </div>
-              ))}
+            {meeting.cc?.length>0 && (
+              <div><div className="text-xs text-slate-500 mb-1">מכותבים</div>
+                <div className="text-xs text-slate-400">{meeting.cc.map(p=>p.name).join(' · ')}</div></div>
+            )}
+            {meeting.status_notes?.length>0 && (
+              <div><div className="text-xs text-slate-500 mb-1">סטטוס</div>
+                <ul className="space-y-0.5">{meeting.status_notes.map((n,i)=>(
+                  <li key={i} className="text-xs text-slate-300 flex gap-2"><span className="text-green-400 shrink-0">•</span>{n}</li>
+                ))}</ul>
+              </div>
+            )}
+          </div>
+
+          {/* Progress bar */}
+          <div className="bg-[#13161f] border border-[#1e2130] rounded-xl p-3">
+            <div className="flex justify-between text-xs mb-1.5">
+              <span className="text-slate-400">השלמת משימות</span>
+              <span className={`font-bold ${pct===100?'text-green-400':'text-yellow-400'}`}>{pct}%</span>
+            </div>
+            <div className="h-2 bg-[#1e2130] rounded-full overflow-hidden">
+              <div className={`h-2 rounded-full transition-all ${pct===100?'bg-green-500':'bg-yellow-500'}`} style={{width:`${pct}%`}}/>
             </div>
           </div>
-        </div>
 
-        <div className="flex gap-3 mt-6">
-          <button onClick={save} className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm py-2.5 rounded-lg font-medium transition-colors">שמור פגישה</button>
-          <button onClick={onClose} className="px-5 bg-[#1e2130] hover:bg-[#252840] text-slate-300 text-sm py-2.5 rounded-lg transition-colors">ביטול</button>
+          {/* Items table */}
+          <div className="bg-[#13161f] border border-[#1e2130] rounded-xl overflow-x-auto">
+            <table className="w-full text-xs min-w-[640px]">
+              <thead>
+                <tr className="border-b border-[#1e2130]">
+                  {['#','נושא','תיאור','לטיפול','עד תאריך','סטטוס'].map(h=>(
+                    <th key={h} className="text-right text-slate-500 font-medium px-3 py-2.5">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {items.map(item=>{
+                  if (item.section) return (
+                    <tr key={item.id} className="bg-[#1a1d27] border-b border-[#1e2130]">
+                      <td className="px-3 py-2 text-slate-500 font-mono">{item.number}</td>
+                      <td colSpan={5} className="px-3 py-2 text-slate-300 font-semibold">{item.topic}</td>
+                    </tr>
+                  )
+                  const open = item.status==='open'
+                  return (
+                    <tr key={item.id} className={`border-b border-[#1e2130]/50 transition-colors ${open?'hover:bg-[#1a1d27]':'bg-green-500/5'}`}>
+                      <td className="px-3 py-2.5 text-slate-500 font-mono whitespace-nowrap">{item.number}</td>
+                      <td className="px-3 py-2.5 text-white font-medium">{item.topic}</td>
+                      <td className="px-3 py-2.5 text-slate-400 leading-relaxed">{item.description}</td>
+                      <td className="px-3 py-2.5 text-slate-400 whitespace-nowrap">{item.responsible}</td>
+                      <td className={`px-3 py-2.5 whitespace-nowrap font-medium ${item.deadline==='מיידי'?'text-red-400':item.deadline==='שוטף'?'text-blue-400':'text-slate-400'}`}>{item.deadline}</td>
+                      <td className="px-3 py-2.5">
+                        <button onClick={()=>toggle(item.id)}
+                          className={`flex items-center gap-1 px-2 py-1 rounded border text-xs transition-all ${
+                            open ? 'border-yellow-500/30 bg-yellow-500/10 text-yellow-400 hover:bg-green-500/10 hover:text-green-400 hover:border-green-500/30'
+                                 : 'border-green-500/30 bg-green-500/10 text-green-400 hover:bg-yellow-500/10 hover:text-yellow-400 hover:border-yellow-500/30'
+                          }`}>
+                          {open ? <Clock size={10}/> : <Check size={10}/>}
+                          {open ? 'פתוח' : 'סגור'}
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-function MeetingCard({ meeting, onExport }) {
-  const [open, setOpen] = useState(false)
-  const pending = meeting.action_items.filter(a => !a.done).length
-  const done = meeting.action_items.filter(a => a.done).length
+// ─── NewMeetingModal ──────────────────────────────────────────────────────────
+function NewMeetingModal({ onClose, onSave, prevMeeting }) {
+  const [step, setStep] = useState(1)
+  const [form, setForm] = useState({
+    title:   prevMeeting?.title   ?? 'פגישה שבועית',
+    project: prevMeeting?.project ?? '',
+    date:    new Date().toISOString().split('T')[0],
+    participants: prevMeeting?.participants ?? [{name:'חיים עזרא',role:'מפקח',company:'חברת פיקוח',email:'haimezra.pm@gmail.com'}],
+    cc: prevMeeting?.cc ?? [],
+    status_notes: [''],
+  })
+
+  const [items, setItems] = useState(() => {
+    if (!prevMeeting) return [{id:`n1`,number:'1',topic:'',description:'',responsible:'',deadline:'',status:'open',section:false}]
+    // carry forward open items
+    return prevMeeting.items
+      .filter(i => i.section || i.status==='open')
+      .map(i => ({...i, id:`c_${i.id}`, status:'open', carried:true}))
+  })
+
+  const carriedCount = items.filter(i=>i.carried&&!i.section).length
+
+  const addP  = () => setForm(f=>({...f,participants:[...f.participants,{name:'',role:'',company:'',email:''}]}))
+  const remP  = i => setForm(f=>({...f,participants:f.participants.filter((_,j)=>j!==i)}))
+  const upP   = (i,k,v) => setForm(f=>({...f,participants:f.participants.map((p,j)=>j===i?{...p,[k]:v}:p)}))
+  const addNote = () => setForm(f=>({...f,status_notes:[...f.status_notes,'']}))
+  const upNote  = (i,v) => setForm(f=>({...f,status_notes:f.status_notes.map((n,j)=>j===i?v:n)}))
+
+  const addRow  = (sec=false) => setItems(p=>[...p,{id:`n${Date.now()}`,number:'',topic:'',description:'',responsible:'',deadline:'',status:'open',section:sec}])
+  const remRow  = id => setItems(p=>p.filter(i=>i.id!==id))
+  const upRow   = (id,k,v) => setItems(p=>p.map(i=>i.id===id?{...i,[k]:v}:i))
+
+  function save() {
+    onSave({
+      id: Date.now().toString(),
+      ...form,
+      status_notes: form.status_notes.filter(n=>n.trim()),
+      items: items.filter(i=>i.topic.trim()||i.section),
+    })
+    onClose()
+  }
 
   return (
-    <div className="bg-[#13161f] border border-[#1e2130] rounded-xl overflow-hidden">
-      {/* Header */}
-      <button onClick={() => setOpen(o => !o)} className="w-full flex items-center gap-4 px-5 py-4 hover:bg-[#1a1d27] transition-colors text-right">
-        <div className="bg-[#1e2130] rounded-xl px-3 py-2 text-center min-w-[56px] shrink-0">
-          <div className="text-xs text-slate-500">{new Date(meeting.date).toLocaleDateString('he-IL',{weekday:'short'})}</div>
-          <div className="text-white font-bold text-lg leading-tight">{new Date(meeting.date).getDate()}</div>
-          <div className="text-xs text-slate-500">{new Date(meeting.date).toLocaleDateString('he-IL',{month:'short'})}</div>
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-white font-semibold text-sm">{meeting.subject}</div>
-          <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
-            <span className="flex items-center gap-1"><MapPin size={11}/>{meeting.location}</span>
-            <span className="flex items-center gap-1"><Users size={11}/>{meeting.participants.length} משתתפים</span>
-            <span className="flex items-center gap-1"><Clock size={11}/>{meeting.time}</span>
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-[#13161f] border border-[#1e2130] rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden" onClick={e=>e.stopPropagation()}>
+        {/* header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-[#1e2130] shrink-0">
+          <h2 className="text-white font-bold flex-1">סיכום פגישה חדש</h2>
+          <div className="flex gap-1 bg-[#1e2130] rounded-lg p-0.5 text-xs">
+            {[['1','כותרת'],['2','פריטים']].map(([s,l])=>(
+              <button key={s} onClick={()=>setStep(+s)}
+                className={`px-3 py-1 rounded-md transition-colors ${step===+s?'bg-green-600/30 text-green-400':'text-slate-500 hover:text-white'}`}>{l}</button>
+            ))}
           </div>
-          <div className="text-xs text-slate-600 mt-0.5">{meeting.project}</div>
+          <button onClick={onClose}><X size={18} className="text-slate-500 hover:text-white"/></button>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
-          {pending > 0 && badge(`${pending} ממתינות`, 'yellow')}
-          {done > 0 && badge(`${done} הושלמו`, 'green')}
-          {open ? <ChevronDown size={16} className="text-slate-500"/> : <ChevronRight size={16} className="text-slate-500"/>}
-        </div>
-      </button>
 
-      {/* Body */}
-      {open && (
-        <div className="border-t border-[#1e2130] px-5 py-4 space-y-5">
-          {/* Participants */}
-          <div>
-            <h4 className="text-xs text-slate-500 uppercase tracking-wide mb-2">משתתפים</h4>
-            <div className="flex flex-wrap gap-2">
-              {meeting.participants.map((p,i) => (
-                <span key={i} className="text-xs bg-[#1e2130] text-slate-300 px-2.5 py-1 rounded-full border border-[#252840]">{p}</span>
-              ))}
+        <div className="flex-1 overflow-y-auto p-5">
+        {step===1 && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="text-xs text-slate-400 mb-1 block">שם הפגישה</label>
+                <input value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))} className={inp}/></div>
+              <div><label className="text-xs text-slate-400 mb-1 block">פרויקט</label>
+                <input value={form.project} onChange={e=>setForm(f=>({...f,project:e.target.value}))} className={inp} placeholder="שם הפרויקט"/></div>
             </div>
-          </div>
+            <div><label className="text-xs text-slate-400 mb-1 block">תאריך</label>
+              <input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))} className={inp}/></div>
 
-          {/* Summary */}
-          <div>
-            <h4 className="text-xs text-slate-500 uppercase tracking-wide mb-2">סיכום</h4>
-            <p className="text-sm text-slate-300 leading-relaxed">{meeting.summary}</p>
-          </div>
-
-          {/* Decisions */}
-          {meeting.decisions.length > 0 && (
             <div>
-              <h4 className="text-xs text-slate-500 uppercase tracking-wide mb-2">החלטות</h4>
-              <ul className="space-y-1.5">
-                {meeting.decisions.map((d,i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
-                    <span className="text-green-400 mt-0.5 shrink-0">✓</span>
-                    {d}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Action items */}
-          {meeting.action_items.length > 0 && (
-            <div>
-              <h4 className="text-xs text-slate-500 uppercase tracking-wide mb-2">משימות לביצוע</h4>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs text-slate-400">משתתפים</label>
+                <button onClick={addP} className="text-xs text-green-400 hover:text-green-300">+ הוסף משתתף</button>
+              </div>
               <div className="space-y-2">
-                {meeting.action_items.map((a,i) => (
-                  <div key={i} className={`flex items-center gap-3 p-3 rounded-lg border ${a.done ? 'bg-green-950/20 border-green-900/30' : 'bg-[#1a1d27] border-[#252840]'}`}>
-                    <CheckSquare size={15} className={a.done ? 'text-green-400' : 'text-slate-500'} />
-                    <span className={`flex-1 text-sm ${a.done ? 'text-slate-500 line-through' : 'text-slate-300'}`}>{a.task}</span>
-                    <span className="text-xs text-blue-400">{a.responsible}</span>
-                    <span className="text-xs text-slate-500">{a.deadline ? new Date(a.deadline).toLocaleDateString('he-IL') : ''}</span>
+                {form.participants.map((p,i)=>(
+                  <div key={i} className="grid grid-cols-4 gap-1.5 items-center">
+                    <input value={p.name}    onChange={e=>upP(i,'name',e.target.value)}    placeholder="שם"     className={sm}/>
+                    <input value={p.role}    onChange={e=>upP(i,'role',e.target.value)}    placeholder="תפקיד"  className={sm}/>
+                    <input value={p.company} onChange={e=>upP(i,'company',e.target.value)} placeholder="חברה"   className={sm}/>
+                    <div className="flex gap-1">
+                      <input value={p.email} onChange={e=>upP(i,'email',e.target.value)} placeholder="אימייל" className={sm+' flex-1'} dir="ltr"/>
+                      <button onClick={()=>remP(i)} className="text-slate-600 hover:text-red-400 shrink-0"><X size={12}/></button>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
-          )}
 
-          {/* Next meeting + export */}
-          <div className="flex items-center justify-between pt-2 border-t border-[#1e2130]">
-            <div className="text-sm text-slate-400">
-              {meeting.next_meeting && (
-                <span>פגישה הבאה: <span className="text-white font-medium">{new Date(meeting.next_meeting).toLocaleDateString('he-IL')}</span></span>
-              )}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs text-slate-400">נקודות סטטוס</label>
+                <button onClick={addNote} className="text-xs text-green-400 hover:text-green-300">+ הוסף</button>
+              </div>
+              <div className="space-y-1.5">
+                {form.status_notes.map((n,i)=>(
+                  <div key={i} className="flex gap-2 items-center">
+                    <span className="text-green-400 text-xs shrink-0">•</span>
+                    <input value={n} onChange={e=>upNote(i,e.target.value)} className={inp} placeholder="נושא סטטוס מרכזי..."/>
+                  </div>
+                ))}
+              </div>
             </div>
-            <button
-              onClick={() => onExport(meeting)}
-              className="flex items-center gap-2 text-sm bg-[#1e2130] hover:bg-[#252840] text-slate-300 hover:text-white px-3 py-1.5 rounded-lg border border-[#374151] transition-colors"
-            >
-              <Download size={14}/>
-              ייצא סיכום
-            </button>
+
+            {prevMeeting && (
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-xs">
+                <span className="text-blue-300 font-medium">העברה אוטומטית: </span>
+                <span className="text-blue-400">{carriedCount} פריטים פתוחים</span>
+                <span className="text-blue-300"> מהפגישה הקודמת ({fmtDate(prevMeeting.date)}) יועברו לשלב הפריטים</span>
+              </div>
+            )}
           </div>
+        )}
+
+        {step===2 && (
+          <div>
+            {carriedCount > 0 && (
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-xs text-blue-300 mb-3">
+                {carriedCount} פריטים הועברו אוטומטית מהפגישה הקודמת — סמן כ"סגור" את אלה שטופלו
+              </div>
+            )}
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs min-w-[700px]">
+                <thead>
+                  <tr className="border-b border-[#1e2130]">
+                    {['#','נושא','תיאור','לטיפול','עד תאריך',''].map(h=>(
+                      <th key={h} className="text-right text-slate-500 font-medium px-2 py-2">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map(item=>(
+                    <tr key={item.id} className={`border-b border-[#1e2130]/50 ${item.section?'bg-[#1a1d27]':''} ${item.carried?'opacity-75':''}`}>
+                      <td className="px-2 py-1.5 w-14">
+                        <input value={item.number} onChange={e=>upRow(item.id,'number',e.target.value)} className={sm+' w-12 text-center'}/></td>
+                      <td className="px-2 py-1.5 w-32">
+                        <input value={item.topic} onChange={e=>upRow(item.id,'topic',e.target.value)} className={sm+' w-full'} placeholder={item.section?'כותרת':'נושא'}/></td>
+                      {!item.section ? <>
+                        <td className="px-2 py-1.5"><textarea value={item.description} onChange={e=>upRow(item.id,'description',e.target.value)} rows={2} className={sm+' w-full resize-none min-w-[140px]'}/></td>
+                        <td className="px-2 py-1.5 w-28"><input value={item.responsible} onChange={e=>upRow(item.id,'responsible',e.target.value)} className={sm+' w-full'} placeholder="שם"/></td>
+                        <td className="px-2 py-1.5 w-24"><input value={item.deadline} onChange={e=>upRow(item.id,'deadline',e.target.value)} className={sm+' w-full'} placeholder="מיידי"/></td>
+                      </> : <td colSpan={3}/>}
+                      <td className="px-2 py-1.5 w-8">
+                        <button onClick={()=>remRow(item.id)} className="text-slate-600 hover:text-red-400"><Trash2 size={11}/></button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex gap-3 mt-3">
+              <button onClick={()=>addRow(false)} className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1"><Plus size={11}/> שורה</button>
+              <button onClick={()=>addRow(true)}  className="text-xs text-slate-500 hover:text-white flex items-center gap-1"><Plus size={11}/> כותרת קטגוריה</button>
+            </div>
+          </div>
+        )}
         </div>
-      )}
+
+        {/* footer */}
+        <div className="flex gap-3 px-5 py-4 border-t border-[#1e2130] shrink-0">
+          {step===1
+            ? <button onClick={()=>setStep(2)} className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm py-2.5 rounded-lg font-medium">המשך לפריטים ←</button>
+            : <><button onClick={()=>setStep(1)} className="px-4 bg-[#1e2130] text-slate-300 text-sm py-2.5 rounded-lg">→ חזור</button>
+               <button onClick={save} className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm py-2.5 rounded-lg font-medium">שמור סיכום</button></>
+          }
+          <button onClick={onClose} className="px-4 bg-[#1e2130] text-slate-300 text-sm py-2.5 rounded-lg">ביטול</button>
+        </div>
+      </div>
     </div>
   )
 }
 
-function exportMeeting(meeting) {
-  const lines = [
-    `סיכום פגישה — ${meeting.subject}`,
-    `${'='.repeat(50)}`,
-    ``,
-    `תאריך: ${new Date(meeting.date).toLocaleDateString('he-IL')}   שעה: ${meeting.time}`,
-    `פרויקט: ${meeting.project}`,
-    `מיקום: ${meeting.location}`,
-    ``,
-    `משתתפים:`,
-    ...meeting.participants.map(p => `  • ${p}`),
-    ``,
-    `סיכום הפגישה:`,
-    meeting.summary,
-    ``,
-    `החלטות:`,
-    ...meeting.decisions.map((d,i) => `  ${i+1}. ${d}`),
-    ``,
-    `משימות לביצוע:`,
-    ...meeting.action_items.map(a => `  [ ] ${a.task} — אחראי: ${a.responsible}   עד: ${a.deadline ? new Date(a.deadline).toLocaleDateString('he-IL') : '-'}`),
-    ``,
-    meeting.next_meeting ? `פגישה הבאה: ${new Date(meeting.next_meeting).toLocaleDateString('he-IL')}` : '',
-    ``,
-    `נערך ע"י: חיים עזרא, מפקח בנייה`,
-    `תאריך הפקה: ${new Date().toLocaleDateString('he-IL')}`,
-  ]
-
-  const content = lines.join('\n')
-  const blob = new Blob(['﻿' + content], { type: 'text/plain;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  const dateStr = meeting.date.replace(/-/g,'')
-  a.href = url
-  a.download = `פגישה_${dateStr}_${meeting.subject.slice(0,20)}.txt`
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
+// ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Meetings() {
-  const [meetings, setMeetings] = useState(INIT_MEETINGS)
-  const [showNew, setShowNew] = useState(false)
-  const [filter, setFilter] = useState('all')
+  const [meetings, setMeetings] = useState(DEMO_MEETINGS)
+  const [selected, setSelected] = useState(null)
+  const [showNew,  setShowNew]  = useState(false)
 
-  function addMeeting(m) { setMeetings(prev => [m, ...prev]) }
+  const lastMeeting = meetings[0] ?? null
 
-  const today = new Date().toISOString().split('T')[0]
-  const filtered = meetings.filter(m => {
-    if (filter === 'upcoming') return m.date >= today
-    if (filter === 'past') return m.date < today
-    return true
-  })
+  function updateMeeting(m) {
+    setMeetings(prev=>prev.map(x=>x.id===m.id?m:x))
+    setSelected(m)
+  }
 
-  const totalPending = meetings.reduce((s, m) => s + m.action_items.filter(a => !a.done).length, 0)
+  const totalOpen = meetings.reduce((s,m)=>s+m.items.filter(i=>!i.section&&i.status==='open').length, 0)
 
   return (
     <div>
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold text-white">פגישות וסיכומים</h1>
-          <p className="text-slate-400 text-sm mt-0.5">{meetings.length} פגישות · {totalPending} משימות פתוחות</p>
+          <h1 className="text-xl font-bold text-white">סיכומי ישיבות</h1>
+          <p className="text-slate-400 text-sm mt-0.5">
+            {meetings.length} פגישות · <span className={totalOpen>0?'text-yellow-400':'text-green-400'}>{totalOpen} פריטים פתוחים</span>
+          </p>
         </div>
-        <button
-          onClick={() => setShowNew(true)}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus size={16}/>
-          פגישה חדשה
+        <button onClick={()=>setShowNew(true)}
+          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded-lg">
+          <Plus size={16}/> סיכום חדש
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-2 mb-4">
-        {[['all','הכל'],['upcoming','הבאות'],['past','עבר']].map(([v,l]) => (
-          <button key={v} onClick={() => setFilter(v)}
-            className={`text-sm px-3 py-1.5 rounded-lg border transition-colors ${filter===v ? 'bg-green-600/20 text-green-400 border-green-500/30' : 'bg-[#13161f] text-slate-400 border-[#1e2130] hover:border-[#374151]'}`}>
-            {l}
-          </button>
-        ))}
-      </div>
-
-      <div className="space-y-3">
-        {filtered.map(m => (
-          <MeetingCard key={m.id} meeting={m} onExport={exportMeeting} />
-        ))}
-        {filtered.length === 0 && (
-          <div className="text-center py-16 text-slate-500">אין פגישות להצגה</div>
+      <div className="bg-[#13161f] border border-[#1e2130] rounded-xl overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-[#1e2130]">
+              {['שם הסיכום','תאריך','התקדמות','סטטוס','נוצר ע"י',''].map(h=>(
+                <th key={h} className="text-right text-slate-500 font-medium px-4 py-3 text-xs">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {meetings.map(m=>{
+              const ns = m.items.filter(i=>!i.section)
+              const dn = ns.filter(i=>i.status==='done').length
+              const pct = ns.length ? Math.round(dn/ns.length*100) : 0
+              return (
+                <tr key={m.id} onClick={()=>setSelected(m)} className="border-b border-[#1e2130]/50 hover:bg-[#1a1d27] cursor-pointer group transition-colors">
+                  <td className="px-4 py-3">
+                    <div className="text-white font-medium">{m.title}</div>
+                    <div className="text-slate-500 text-xs">{m.project}</div>
+                  </td>
+                  <td className="px-4 py-3 text-slate-400 text-sm whitespace-nowrap">{fmtDate(m.date)}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 h-1.5 bg-[#1e2130] rounded-full overflow-hidden">
+                        <div className={`h-1.5 rounded-full ${pct===100?'bg-green-500':'bg-yellow-500'}`} style={{width:`${pct}%`}}/>
+                      </div>
+                      <span className="text-xs text-slate-500">{dn}/{ns.length}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs px-2 py-0.5 rounded border ${pct===100
+                      ?'bg-green-500/15 border-green-500/30 text-green-400'
+                      :'bg-yellow-500/15 border-yellow-500/30 text-yellow-400'}`}>
+                      {pct===100?'נשלח':'בטיפול'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-500 text-xs">{m.participants[0]?.name}</td>
+                  <td className="px-4 py-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={e=>{e.stopPropagation();exportMeeting(m)}} className="text-slate-500 hover:text-white">
+                      <Download size={14}/>
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+        {meetings.length===0 && (
+          <div className="text-center py-16">
+            <Users size={40} className="mx-auto mb-3 text-slate-700"/>
+            <p className="text-slate-500 text-sm">אין סיכומי ישיבות</p>
+            <button onClick={()=>setShowNew(true)} className="mt-2 text-green-400 text-sm hover:text-green-300">+ צור סיכום ראשון</button>
+          </div>
         )}
       </div>
 
-      {showNew && <NewMeetingModal onClose={() => setShowNew(false)} onSave={addMeeting} />}
+      {selected && <MeetingDetail meeting={selected} onClose={()=>setSelected(null)} onUpdate={updateMeeting}/>}
+      {showNew   && <NewMeetingModal onClose={()=>setShowNew(false)} onSave={m=>{setMeetings(p=>[m,...p])}} prevMeeting={lastMeeting}/>}
     </div>
   )
 }
