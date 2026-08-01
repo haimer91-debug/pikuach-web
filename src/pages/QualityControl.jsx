@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { QC_CATEGORIES } from '../lib/qc_data'
+import { useLocalStorage } from '../lib/useLocalStorage'
 import {
   ChevronDown, ChevronRight, CheckCircle2, XCircle,
   Minus, Search, Download, RotateCcw, Plus, X, Building2, Home
@@ -183,10 +184,9 @@ function CategoryCard({ cat, catIdx, state, onToggle, open, onOpenToggle }) {
 }
 
 export default function QualityControl() {
-  const [scopes, setScopes]           = useState(DEFAULT_SCOPES)
+  const [scopes, setScopes]           = useLocalStorage('pikuach_qc_scopes', DEFAULT_SCOPES)
   const [currentScopeId, setCurrentScopeId] = useState('building')
-  // allStates: { [scopeId]: { [itemKey]: status } }
-  const [allStates, setAllStates]     = useState({ building: INIT_STATE() })
+  const [allStates, setAllStates]     = useLocalStorage('pikuach_qc_states', { building: INIT_STATE() })
   const [openCats, setOpenCats]       = useState({ 0: true })
   const [search, setSearch]           = useState('')
   const [filter, setFilter]           = useState('all')

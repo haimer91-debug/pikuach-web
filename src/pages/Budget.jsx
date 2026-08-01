@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { MOCK_PROJECTS } from '../lib/mock'
+import { useLocalStorage } from '../lib/useLocalStorage'
 import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Download } from 'lucide-react'
 
 const PROJECT_ITEMS = {
@@ -46,8 +47,9 @@ function exportBudget(project, items, total, spent) {
 }
 
 export default function Budget() {
-  const [projectId, setProjectId] = useState('1')
-  const project = MOCK_PROJECTS.find(p => p.id === projectId) ?? MOCK_PROJECTS[0]
+  const [projects] = useLocalStorage('pikuach_projects', MOCK_PROJECTS)
+  const [projectId, setProjectId] = useState(() => projects[0]?.id ?? '1')
+  const project = projects.find(p => p.id === projectId) ?? projects[0]
   const items = PROJECT_ITEMS[projectId] ?? []
 
   const totalBudget = items.reduce((s, i) => s + i.budget, 0)
@@ -64,7 +66,7 @@ export default function Budget() {
         <div className="flex gap-2 items-center">
           <select value={projectId} onChange={e => setProjectId(e.target.value)}
             className="bg-[#1e2130] border border-[#374151] rounded-lg px-3 py-2 text-sm text-white outline-none">
-            {MOCK_PROJECTS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           <button onClick={() => exportBudget(project, items, totalBudget, totalSpent)}
             className="flex items-center gap-1.5 bg-[#1e2130] hover:bg-[#252840] border border-[#374151] text-slate-400 hover:text-white text-sm px-3 py-2 rounded-lg transition-colors">

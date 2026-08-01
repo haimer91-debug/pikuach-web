@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { MOCK_PROJECTS, MOCK_FINDINGS, MOCK_WORKLOG, MOCK_TASKS } from '../lib/mock'
+import { useLocalStorage } from '../lib/useLocalStorage'
 import { FileText, Download, Eye, CheckCircle2, AlertCircle, Calendar } from 'lucide-react'
 
 const SEV_LABEL   = { critical: 'קריטי', high: 'גבוה', medium: 'בינוני', low: 'נמוך' }
@@ -185,17 +186,23 @@ function exportTxt(text, filename) {
 }
 
 export default function Reports() {
-  const [projectId, setProjectId] = useState('1')
+  const [projects] = useLocalStorage('pikuach_projects', MOCK_PROJECTS)
+  const [findings] = useLocalStorage('pikuach_findings', MOCK_FINDINGS)
+  const [worklog]  = useLocalStorage('pikuach_worklog',  MOCK_WORKLOG)
+  const [tasks]    = useLocalStorage('pikuach_tasks',    MOCK_TASKS)
+
+  const [projectId, setProjectId] = useState(() => projects[0]?.id ?? '1')
   const [reportType, setReportType] = useState('visit')
   const [preview, setPreview] = useState(null)
 
-  const project = MOCK_PROJECTS.find(p => p.id === projectId) ?? MOCK_PROJECTS[0]
+  const project = projects.find(p => p.id === projectId) ?? projects[0]
 
   function generate() {
+    if (!project) return
     let text = ''
-    if (reportType === 'visit')     text = buildVisitReport(project, MOCK_WORKLOG, MOCK_FINDINGS)
-    if (reportType === 'findings')  text = buildFindingsReport(project, MOCK_FINDINGS)
-    if (reportType === 'monthly')   text = buildMonthlyReport(project, MOCK_FINDINGS, MOCK_WORKLOG, MOCK_TASKS)
+    if (reportType === 'visit')     text = buildVisitReport(project, worklog, findings)
+    if (reportType === 'findings')  text = buildFindingsReport(project, findings)
+    if (reportType === 'monthly')   text = buildMonthlyReport(project, findings, worklog, tasks)
     setPreview(text)
   }
 
@@ -221,7 +228,7 @@ export default function Reports() {
             <label className="text-xs text-slate-400 mb-2 block">פרויקט</label>
             <select value={projectId} onChange={e => { setProjectId(e.target.value); setPreview(null) }}
               className="w-full bg-[#1e2130] border border-[#252840] rounded-lg px-3 py-2 text-sm text-white outline-none">
-              {MOCK_PROJECTS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
 
