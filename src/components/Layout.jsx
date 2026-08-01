@@ -4,7 +4,7 @@ import {
   LayoutDashboard, FolderOpen, Camera, BookOpen,
   CheckSquare, DollarSign, FileText, Shield,
   ChevronLeft, ChevronRight, MessageSquare, Bell,
-  HardHat, ClipboardCheck, Users
+  HardHat, ClipboardCheck, Users, BarChart2
 } from 'lucide-react'
 
 const NAV = [
@@ -18,6 +18,7 @@ const NAV = [
   { to: '/documents', icon: FileText, label: 'תוכניות ומסמכים' },
   { to: '/budget', icon: DollarSign, label: 'תקציב' },
   { to: '/safety', icon: Shield, label: 'בטיחות' },
+  { to: '/reports', icon: BarChart2, label: 'דוחות' },
   { to: '/ai', icon: MessageSquare, label: 'מוח הבנייה' },
 ]
 
