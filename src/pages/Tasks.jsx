@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { MOCK_TASKS } from '../lib/mock'
+import { useLocalStorage } from '../lib/useLocalStorage'
 import { Plus, Clock, X, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const PRIO_BORDER = { high: 'border-r-red-500', medium: 'border-r-yellow-500', low: 'border-r-slate-600' }
@@ -50,7 +51,7 @@ function TaskCard({ task, onMove, today }) {
 }
 
 export default function Tasks() {
-  const [tasks, setTasks] = useState(MOCK_TASKS)
+  const [tasks, setTasks] = useLocalStorage('pikuach_tasks', MOCK_TASKS)
   const [showNew, setShowNew] = useState(false)
   const [form, setForm] = useState({ title: '', priority: 'medium', due_date: '', description: '', assignee: 'חיים עזרא' })
 

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { MOCK_WORKLOG } from '../lib/mock'
+import { useLocalStorage } from '../lib/useLocalStorage'
 import { Plus, Sun, Cloud, CloudRain, Users, X, Download, FileText } from 'lucide-react'
 
 const WEATHER_ICON  = { sunny: Sun, cloudy: Cloud, rainy: CloudRain }
@@ -103,7 +104,7 @@ function exportLog(entries) {
 }
 
 export default function WorkLog() {
-  const [entries, setEntries] = useState(MOCK_WORKLOG)
+  const [entries, setEntries] = useLocalStorage('pikuach_worklog', MOCK_WORKLOG)
   const [showNew, setShowNew] = useState(false)
 
   return (

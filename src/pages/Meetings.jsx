@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Plus, X, Download, Users, Check, Clock, ChevronLeft, Trash2 } from 'lucide-react'
+import { useLocalStorage } from '../lib/useLocalStorage'
 
 // ─── demo data ────────────────────────────────────────────────────────────────
 const DEMO_MEETINGS = [
@@ -366,7 +367,7 @@ function NewMeetingModal({ onClose, onSave, prevMeeting }) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Meetings() {
-  const [meetings, setMeetings] = useState(DEMO_MEETINGS)
+  const [meetings, setMeetings] = useLocalStorage('pikuach_meetings', DEMO_MEETINGS)
   const [selected, setSelected] = useState(null)
   const [showNew,  setShowNew]  = useState(false)
 

@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { MOCK_FINDINGS, MOCK_PROJECTS } from '../lib/mock'
+import { useLocalStorage } from '../lib/useLocalStorage'
 import { Plus, Camera, Search, X, Download, AlertCircle, CheckCircle2, Clock, Eye, ChevronLeft } from 'lucide-react'
 
 const SEV_COLOR = {
@@ -26,8 +27,9 @@ function NewFindingModal({ onClose, onSave, nextNumber }) {
   function handleImg(e) {
     const files = Array.from(e.target.files)
     files.forEach(file => {
-      const url = URL.createObjectURL(file)
-      setImages(prev => [...prev, url])
+      const reader = new FileReader()
+      reader.onload = () => setImages(prev => [...prev, reader.result])
+      reader.readAsDataURL(file)
     })
   }
 
@@ -172,7 +174,7 @@ function exportFindings(findings) {
 }
 
 export default function Findings() {
-  const [findings, setFindings] = useState(MOCK_FINDINGS)
+  const [findings, setFindings] = useLocalStorage('pikuach_findings', MOCK_FINDINGS)
   const [showNew, setShowNew] = useState(false)
   const [selected, setSelected] = useState(null)
   const [search, setSearch] = useState('')

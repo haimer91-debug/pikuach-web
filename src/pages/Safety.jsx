@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Shield, AlertTriangle, CheckCircle2, XCircle, ClipboardList, Plus, X } from 'lucide-react'
+import { useLocalStorage } from '../lib/useLocalStorage'
 
 const INIT_CHECKLIST = [
   { id: '1', item: 'ציוד מגן אישי (קסדה, נעלי בטיחות, אפוד)', status: 'ok' },
@@ -84,8 +85,8 @@ function NewIncidentModal({ onClose, onSave }) {
 }
 
 export default function Safety() {
-  const [checklist, setChecklist] = useState(INIT_CHECKLIST)
-  const [incidents, setIncidents] = useState(INIT_INCIDENTS)
+  const [checklist, setChecklist] = useLocalStorage('pikuach_safety_checklist', INIT_CHECKLIST)
+  const [incidents, setIncidents] = useLocalStorage('pikuach_safety_incidents', INIT_INCIDENTS)
   const [showNew, setShowNew] = useState(false)
 
   function cycleStatus(id) {
