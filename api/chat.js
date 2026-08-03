@@ -23,21 +23,37 @@ function isGoodChunk(c) {
   return heCount / Math.max(t.length, 1) > 0.15
 }
 
-function searchStandards(query, topN = 5) {
+function searchStandards(query, topN = 8) {
   const chunks   = getChunks().filter(isGoodChunk)
   if (!chunks.length) return []
-  const keywords = query.split(/[\s,.\-()/\[\]]+/)
-    .map(w => w.replace(/[״"'`]/g, '').trim())
+  const keywords = query.split(/[\s,.\-()/\[\]"״'"'`]+/)
+    .map(w => w.trim())
     .filter(w => w.length >= 2 && !STOPWORDS.has(w))
   if (!keywords.length) return []
 
   return chunks
     .map(c => {
-      const haystack = (c.text + ' ' + c.file).toLowerCase()
-      const score = keywords.reduce((s, kw) => {
+      const text = (c.text || '').toLowerCase()
+      const fileCtx = (c.file || '').toLowerCase()
+      let score = 0
+      for (const kw of keywords) {
         const lk = kw.toLowerCase()
-        return s + (haystack.includes(lk) ? 2 : (haystack.split(' ').some(t => t.startsWith(lk)) ? 1 : 0))
-      }, 0)
+        // exact phrase in text: 3pts, in filename: 2pts
+        if (text.includes(lk)) score += 3
+        else if (text.split(/\s+/).some(t => t.startsWith(lk))) score += 1
+        if (fileCtx.includes(lk)) score += 2
+      }
+      // bonus: multiple keywords close together (within 50 chars)
+      if (keywords.length >= 2) {
+        const positions = keywords
+          .map(kw => text.indexOf(kw.toLowerCase()))
+          .filter(p => p >= 0)
+        if (positions.length >= 2) {
+          const span = Math.max(...positions) - Math.min(...positions)
+          if (span < 50) score += 3
+          else if (span < 150) score += 1
+        }
+      }
       return { ...c, score }
     })
     .filter(c => c.score > 0)
