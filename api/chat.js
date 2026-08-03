@@ -11,6 +11,16 @@ export default async function handler(req, res) {
     const claudeMessages = messages
       .filter(m => m.role !== 'system')
       .map(m => {
+        if (m.pdf) {
+          const [, data] = m.pdf.split(',')
+          return {
+            role: m.role,
+            content: [
+              { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data } },
+              { type: 'text', text: m.content || `קרא את התקן "${m.pdfName}" וענה על שאלות לפי התוכן המדויק שבו.` },
+            ],
+          }
+        }
         if (m.image) {
           const [meta, data] = m.image.split(',')
           const mediaType = meta.match(/data:([^;]+)/)?.[1] || 'image/jpeg'
@@ -34,7 +44,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1500,
+        max_tokens: 4096,
         system: `אתה "מוח הבנייה" — מפקח בנייה בכיר ויועץ הנדסי עם ידע מעמיק בתקנים ורגולציה ישראלית.
 
 הידע שלך כולל:

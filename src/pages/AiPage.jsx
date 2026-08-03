@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Paperclip, HardHat, User, Loader, X } from 'lucide-react'
+import { Send, Paperclip, HardHat, User, Loader, X, FileText } from 'lucide-react'
 
 const WELCOME = `שלום! אני מוח הבנייה 🏗️
 
@@ -30,6 +30,12 @@ function Bubble({ msg }) {
         {msg.image && (
           <img src={msg.image} className="mt-2 rounded-lg max-h-48 w-auto" />
         )}
+        {msg.pdfName && (
+          <div className="mt-2 flex items-center gap-1.5 text-xs opacity-75">
+            <FileText size={12} />
+            <span>{msg.pdfName}</span>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -41,6 +47,7 @@ export default function AiPage() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [imgPreview, setImgPreview] = useState(null)
+  const [pdfFile, setPdfFile] = useState(null)
   const fileRef = useRef()
   const bottomRef = useRef()
 
@@ -49,9 +56,9 @@ export default function AiPage() {
   }, [messages, loading])
 
   async function send() {
-    if (!input.trim() && !imgPreview) return
+    if (!input.trim() && !imgPreview && !pdfFile) return
 
-    // Convert image blob URL → base64 before sending to server
+    // Convert image blob URL → base64
     let imageBase64 = null
     if (imgPreview) {
       const res = await fetch(imgPreview)
@@ -63,18 +70,30 @@ export default function AiPage() {
       })
     }
 
-    const userMsg = { role: 'user', content: input, image: imageBase64 }
+    // Convert PDF file → base64
+    let pdfBase64 = null
+    let pdfName = null
+    if (pdfFile) {
+      pdfName = pdfFile.name
+      pdfBase64 = await new Promise(resolve => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result)
+        reader.readAsDataURL(pdfFile)
+      })
+    }
+
+    const userMsg = { role: 'user', content: input, image: imageBase64, pdf: pdfBase64, pdfName }
     const newMessages = [...messages, userMsg]
     setMessages(newMessages)
     setInput('')
     setImgPreview(null)
+    setPdfFile(null)
     setLoading(true)
 
     try {
-      // Send only role+content+image to server (skip welcome message which has no role pair)
       const history = newMessages
         .filter(m => m.content && m.content !== WELCOME)
-        .map(m => ({ role: m.role, content: m.content, image: m.image || null }))
+        .map(m => ({ role: m.role, content: m.content, image: m.image || null, pdf: m.pdf || null, pdfName: m.pdfName || null }))
 
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -93,7 +112,14 @@ export default function AiPage() {
 
   function handleImg(e) {
     const file = e.target.files[0]
-    if (file) setImgPreview(URL.createObjectURL(file))
+    if (!file) return
+    if (file.type === 'application/pdf') {
+      setPdfFile(file)
+      setImgPreview(null)
+    } else {
+      setImgPreview(URL.createObjectURL(file))
+      setPdfFile(null)
+    }
   }
 
   function handleKey(e) {
@@ -130,18 +156,26 @@ export default function AiPage() {
       {imgPreview && (
         <div className="relative mb-2 inline-block">
           <img src={imgPreview} className="h-20 w-auto rounded-lg border border-[#252840]" />
-          <button
-            onClick={() => setImgPreview(null)}
-            className="absolute -top-1.5 -right-1.5 bg-red-600 rounded-full p-0.5"
-          >
+          <button onClick={() => setImgPreview(null)} className="absolute -top-1.5 -right-1.5 bg-red-600 rounded-full p-0.5">
             <X size={12} className="text-white" />
+          </button>
+        </div>
+      )}
+
+      {/* PDF preview */}
+      {pdfFile && (
+        <div className="relative mb-2 inline-flex items-center gap-2 bg-[#1a1d27] border border-blue-500/40 rounded-lg px-3 py-2">
+          <FileText size={16} className="text-blue-400 shrink-0" />
+          <span className="text-blue-300 text-xs max-w-[200px] truncate">{pdfFile.name}</span>
+          <button onClick={() => setPdfFile(null)} className="text-slate-500 hover:text-red-400 transition-colors">
+            <X size={12} />
           </button>
         </div>
       )}
 
       {/* Input */}
       <div className="bg-[#13161f] border border-[#1e2130] rounded-xl flex items-end gap-2 p-2">
-        <input ref={fileRef} type="file" accept="image/*" onChange={handleImg} className="hidden" />
+        <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={handleImg} className="hidden" />
         <button
           onClick={() => fileRef.current.click()}
           className="w-9 h-9 rounded-lg bg-[#1e2130] flex items-center justify-center text-slate-400 hover:text-white transition-colors shrink-0"
@@ -163,7 +197,7 @@ export default function AiPage() {
         />
         <button
           onClick={send}
-          disabled={!input.trim() && !imgPreview}
+          disabled={!input.trim() && !imgPreview && !pdfFile}
           className="w-9 h-9 rounded-lg bg-green-600 hover:bg-green-700 disabled:bg-[#1e2130] disabled:text-slate-600 flex items-center justify-center text-white transition-colors shrink-0"
         >
           <Send size={15} />
