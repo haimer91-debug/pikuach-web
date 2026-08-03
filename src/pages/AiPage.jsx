@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Paperclip, HardHat, User, Loader, X, FileText } from 'lucide-react'
+import { Send, Paperclip, HardHat, User, Loader, X, FileText, Trash2 } from 'lucide-react'
+import { useLocalStorage } from '../lib/useLocalStorage'
 
-const WELCOME = `שלום! אני מוח הבנייה 🏗️
+const WELCOME_MSG = { role: 'assistant', content: `שלום! אני מוח הבנייה 🏗️
 
 אני עוזר לך בכל שאלה הנדסית ומקצועית:
 • ניתוח ממצאים לפי ת"י ישראלי
@@ -10,7 +11,7 @@ const WELCOME = `שלום! אני מוח הבנייה 🏗️
 • ייעוץ בנושאי פיקוח בנייה
 • ניסוח ממצאים לדוחות
 
-ניתן לצרף תמונות של ממצאים לניתוח!`
+ניתן לצרף תמונות של ממצאים לניתוח!` }
 
 function Bubble({ msg }) {
   const isUser = msg.role === 'user'
@@ -41,24 +42,34 @@ function Bubble({ msg }) {
   )
 }
 
-
 export default function AiPage() {
-  const [messages, setMessages] = useState([{ role: 'assistant', content: WELCOME }])
+  const [stored, setStored] = useLocalStorage('pikuach_ai_chat', [WELCOME_MSG])
+  const [messages, setMessages] = useState(stored)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [imgPreview, setImgPreview] = useState(null)
   const [pdfFile, setPdfFile] = useState(null)
+  const [confirmClear, setConfirmClear] = useState(false)
   const fileRef = useRef()
   const bottomRef = useRef()
+
+  // Save to localStorage whenever messages change
+  useEffect(() => {
+    setStored(messages)
+  }, [messages])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
+  function clearChat() {
+    setMessages([WELCOME_MSG])
+    setConfirmClear(false)
+  }
+
   async function send() {
     if (!input.trim() && !imgPreview && !pdfFile) return
 
-    // Convert image blob URL → base64
     let imageBase64 = null
     if (imgPreview) {
       const res = await fetch(imgPreview)
@@ -70,7 +81,6 @@ export default function AiPage() {
       })
     }
 
-    // Convert PDF file → base64
     let pdfBase64 = null
     let pdfName = null
     if (pdfFile) {
@@ -92,7 +102,7 @@ export default function AiPage() {
 
     try {
       const history = newMessages
-        .filter(m => m.content && m.content !== WELCOME)
+        .filter(m => m.role && m.content && m.content !== WELCOME_MSG.content)
         .map(m => ({ role: m.role, content: m.content, image: m.image || null, pdf: m.pdf || null, pdfName: m.pdfName || null }))
 
       const res = await fetch('/api/chat', {
@@ -110,9 +120,10 @@ export default function AiPage() {
     }
   }
 
-  function handleImg(e) {
+  function handleFile(e) {
     const file = e.target.files[0]
     if (!file) return
+    e.target.value = ''
     if (file.type === 'application/pdf') {
       setPdfFile(file)
       setImgPreview(null)
@@ -129,11 +140,37 @@ export default function AiPage() {
     }
   }
 
+  const hasHistory = messages.length > 1
+
   return (
     <div className="flex flex-col h-full" style={{ height: 'calc(100vh - 56px - 40px)' }}>
-      <div className="mb-3">
-        <h1 className="text-xl font-bold text-white">מוח הבנייה</h1>
-        <p className="text-slate-400 text-sm mt-0.5">AI מתמחה בבנייה ופיקוח — שאל כל שאלה הנדסית</p>
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h1 className="text-xl font-bold text-white">מוח הבנייה</h1>
+          <p className="text-slate-400 text-sm mt-0.5">AI מתמחה בבנייה ופיקוח — שאל כל שאלה הנדסית</p>
+        </div>
+        {hasHistory && (
+          confirmClear ? (
+            <div className="flex items-center gap-2">
+              <span className="text-slate-400 text-xs">למחוק שיחה?</span>
+              <button onClick={clearChat}
+                className="text-xs bg-red-600 hover:bg-red-700 text-white px-2.5 py-1 rounded-lg transition-colors">
+                מחק
+              </button>
+              <button onClick={() => setConfirmClear(false)}
+                className="text-xs bg-[#1e2130] hover:bg-[#252840] text-slate-400 px-2.5 py-1 rounded-lg transition-colors">
+                בטל
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmClear(true)}
+              className="flex items-center gap-1.5 text-slate-500 hover:text-red-400 transition-colors text-sm px-2 py-1 rounded-lg hover:bg-[#1e2130]">
+              <Trash2 size={14} />
+              נקה שיחה
+            </button>
+          )
+        )}
       </div>
 
       {/* Messages */}
@@ -175,9 +212,10 @@ export default function AiPage() {
 
       {/* Input */}
       <div className="bg-[#13161f] border border-[#1e2130] rounded-xl flex items-end gap-2 p-2">
-        <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={handleImg} className="hidden" />
+        <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={handleFile} className="hidden" />
         <button
           onClick={() => fileRef.current.click()}
+          title="צרף תמונה או PDF תקן"
           className="w-9 h-9 rounded-lg bg-[#1e2130] flex items-center justify-center text-slate-400 hover:text-white transition-colors shrink-0"
         >
           <Paperclip size={16} />

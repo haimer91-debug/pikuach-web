@@ -1,3 +1,53 @@
+import fs from 'fs'
+import path from 'path'
+
+// ── אינדקס תקנים (נטען פעם אחת בזיכרון) ─────────────────────────
+let _chunks = null
+function getChunks() {
+  if (_chunks) return _chunks
+  const p = path.join(process.cwd(), 'public', 'standards', 'chunks.json')
+  if (fs.existsSync(p)) _chunks = JSON.parse(fs.readFileSync(p, 'utf-8'))
+  else _chunks = []
+  return _chunks
+}
+
+const STOPWORDS = new Set([
+  'של','על','את','עם','אל','לא','הוא','היא','הם','הן','זה','זו','אם','כן',
+  'עד','רק','גם','לפי','בין','אבל','או','כי','כך','שם','עוד','לו','לה',
+  'לי','לנו','להם','כל','אחד','יש','אין','כבר','ב','ל','מ','ה','ו','כ','ש'
+])
+
+function searchStandards(query, topN = 5) {
+  const chunks   = getChunks()
+  if (!chunks.length) return []
+  const keywords = query.split(/[\s,.\-()/\[\]]+/)
+    .map(w => w.replace(/[״"'`]/g, '').trim())
+    .filter(w => w.length >= 2 && !STOPWORDS.has(w))
+  if (!keywords.length) return []
+
+  return chunks
+    .map(c => {
+      const haystack = (c.text + ' ' + c.file).toLowerCase()
+      const score = keywords.reduce((s, kw) => {
+        const lk = kw.toLowerCase()
+        return s + (haystack.includes(lk) ? 2 : (haystack.split(' ').some(t => t.startsWith(lk)) ? 1 : 0))
+      }, 0)
+      return { ...c, score }
+    })
+    .filter(c => c.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topN)
+}
+
+function buildContextBlock(chunks) {
+  if (!chunks.length) return ''
+  const lines = chunks.map(c =>
+    `--- ${c.file}, עמוד ${c.page} ---\n${c.text}`
+  )
+  return `\n\n=== קטעים רלוונטיים מהתקנים (OCR) ===\n${lines.join('\n\n')}\n===\nהשתמש בקטעים הנ"ל כמקור ראשוני לתשובתך. ציין שם קובץ + עמוד.`
+}
+
+// ── handler ───────────────────────────────────────────────────────
 export default async function handler(req, res) {
   try {
     if (req.method !== 'POST') return res.status(405).end()
@@ -7,6 +57,14 @@ export default async function handler(req, res) {
 
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' })
+
+    // חיפוש תקנים אוטומטי (רק אם אין PDF מצורף)
+    const lastMsg = messages[messages.length - 1]
+    let standardsContext = ''
+    if (!lastMsg?.pdf && lastMsg?.content) {
+      const hits = searchStandards(lastMsg.content)
+      standardsContext = buildContextBlock(hits)
+    }
 
     const claudeMessages = messages
       .filter(m => m.role !== 'system')
@@ -35,6 +93,22 @@ export default async function handler(req, res) {
         return { role: m.role, content: m.content }
       })
 
+    const systemPrompt = `אתה "מוח הבנייה" — מפקח בנייה בכיר ויועץ הנדסי עם ידע מעמיק בתקנים ורגולציה ישראלית.
+
+הידע שלך כולל:
+• ת"י 466 (ברזל לבניה), ת"י 118 (בטון), ת"י 1555 (ריצוף), ת"י 1090 (פלדת קונסטרוקציה), ת"י 12 (בניה), ת"י 931 (בידוד תרמי)
+• תקנות התכנון והבנייה (בקשה להיתר, ביקורת), חוק התכנון והבנייה תשכ"ה-1965
+• תקנות כיבוי אש, תקנות נגישות
+• דרישות בטון: כיסוי ברזל, ריכוז, עיגון, ערב מינימלי
+
+כללי תשובה — חובה:
+1. ענה תמיד בעברית
+2. אם יש קטעי תקן בהמשך — השתמש בהם כמקור ראשון. ציין שם קובץ + עמוד.
+3. אם אין קטעים רלוונטיים — ענה על בסיס הידע שלך, אבל אמור "לפי ידעי" ולא תציג כציטוט מדויק.
+4. אל תסביר שאין לך "גישה" — ענה ישירות.
+5. סווג ממצאים: קריטי / ממשי / מינורי. המלץ על פעולה.
+6. אל תכתוב טבלאות "מה יש לי / מה אין לי".${standardsContext}`
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -45,23 +119,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 4096,
-        system: `אתה "מוח הבנייה" — מפקח בנייה בכיר ויועץ הנדסי עם ידע מעמיק בתקנים ורגולציה ישראלית.
-
-הידע שלך כולל:
-• ת"י 466 (ברזל לבניה), ת"י 118 (בטון), ת"י 1555 (ריצוף), ת"י 1090 (פלדת קונסטרוקציה), ת"י 12 (בניה), ת"י 931 (בידוד תרמי)
-• תקנות התכנון והבנייה (בקשה להיתר, ביקורת), חוק התכנון והבנייה תשכ"ה-1965
-• תקנות כיבוי אש, תקנות נגישות
-• דרישות בטון: כיסוי ברזל, ריכוז, עיגון, ערב מינימלי
-• עקרונות ג"ק (גרעון קיבולי), עומסים, מתחים
-
-כללי תשובה — חובה:
-1. ענה תמיד בעברית
-2. ענה על בסיס הידע שלך — אל תסביר שאין לך "גישה" או "חיבור" לתקנים. אתה יודע אותם.
-3. ציין תמיד: ת"י רלוונטי, סעיף משוער, מידות מדויקות. אם אינך בטוח במספר הסעיף הספציפי — אמור "לפי ת"י X" בלי מספר סעיף, אל תסרב לענות.
-4. סווג כל ממצא: קריטי / ממשי / מינורי
-5. המלץ על פעולה: עצור עבודה / תקן לפני המשך / תיעד בדוח
-6. אם אינך בטוח — אמור "לפי הבנתי" ו"מומלץ לאמת מול ממ"י", אבל תמיד ענה תחילה על השאלה עצמה
-7. אל תכתוב טבלאות "מה יש לי / מה אין לי" — ענה ישירות על השאלה`,
+        system: systemPrompt,
         messages: claudeMessages,
       }),
     })
