@@ -17,8 +17,14 @@ const STOPWORDS = new Set([
   'לי','לנו','להם','כל','אחד','יש','אין','כבר','ב','ל','מ','ה','ו','כ','ש'
 ])
 
+function isGoodChunk(c) {
+  const t = c.text || ''
+  const heCount = [...t].filter(ch => ch >= 'א' && ch <= 'ת').length
+  return heCount / Math.max(t.length, 1) > 0.15
+}
+
 function searchStandards(query, topN = 5) {
-  const chunks   = getChunks()
+  const chunks   = getChunks().filter(isGoodChunk)
   if (!chunks.length) return []
   const keywords = query.split(/[\s,.\-()/\[\]]+/)
     .map(w => w.replace(/[״"'`]/g, '').trim())

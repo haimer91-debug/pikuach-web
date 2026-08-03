@@ -80,6 +80,17 @@ def ocr_page(img_b64, filename, page_num):
         body_err = e.read().decode()
         raise RuntimeError(f"HTTP {e.code}: {body_err[:200]}")
 
+SKIP_PHRASES = [
+    "אני רואה שהתמונה", "לא יכול לקרוא", "התמונה ריקה", "לא ניתן לקרוא",
+    "i cannot", "image appears to be", "blank page", "empty page",
+    "could not extract", "no text visible"
+]
+
+def is_good_ocr(text):
+    """מסנן תגובות שבהן Claude לא הצליח לקרוא"""
+    t = text.lower()
+    return not any(p in t for p in SKIP_PHRASES) and len(text.strip()) > 30
+
 def text_to_chunks(text, filename, std_num, page_num):
     chunks = []
     words  = text.split()
@@ -175,7 +186,8 @@ def main():
             try:
                 img_b64 = page_to_base64(page)
                 text    = ocr_page(img_b64, fname, pg_idx+1)
-                file_chunks.extend(text_to_chunks(text, fname, std_num, pg_idx+1))
+                if is_good_ocr(text):
+                    file_chunks.extend(text_to_chunks(text, fname, std_num, pg_idx+1))
                 ocr_count += 1
             except Exception as e:
                 print(f"  ⚠ [{idx}] {fname[:40]} עמוד {pg_idx+1}: {e}")

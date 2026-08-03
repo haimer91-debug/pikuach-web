@@ -3,11 +3,18 @@ import path from 'path'
 
 let cachedChunks = null
 
+function isGoodChunk(c) {
+  const t = c.text || ''
+  const heCount = [...t].filter(ch => ch >= 'א' && ch <= 'ת').length
+  return heCount / Math.max(t.length, 1) > 0.15
+}
+
 function loadChunks() {
   if (cachedChunks) return cachedChunks
   const p = path.join(process.cwd(), 'public', 'standards', 'chunks.json')
   if (!fs.existsSync(p)) return []
-  cachedChunks = JSON.parse(fs.readFileSync(p, 'utf-8'))
+  const all = JSON.parse(fs.readFileSync(p, 'utf-8'))
+  cachedChunks = all.filter(isGoodChunk)
   return cachedChunks
 }
 
