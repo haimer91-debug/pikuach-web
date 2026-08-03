@@ -11,7 +11,8 @@ const WELCOME_MSG = { role: 'assistant', content: `שלום! אני מוח הב�
 • ייעוץ בנושאי פיקוח בנייה
 • ניסוח ממצאים לדוחות
 
-ניתן לצרף תמונות של ממצאים לניתוח!` }
+בכל שאלה — אני מחפש אוטומטית בספריית התקנים הישראלית ומצטט מקור ועמוד.
+ניתן גם לצרף תמונות או קבצי PDF לניתוח.` }
 
 function Bubble({ msg }) {
   const isUser = msg.role === 'user'
@@ -178,11 +179,12 @@ export default function AiPage() {
         {messages.map((m, i) => <Bubble key={i} msg={m} />)}
         {loading && (
           <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-[#252840] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-[#252840] flex items-center justify-center shrink-0">
               <HardHat size={15} className="text-green-400" />
             </div>
-            <div className="bg-[#1a1d27] border border-[#252840] rounded-2xl rounded-tl-sm px-4 py-3">
-              <Loader size={16} className="text-green-400 animate-spin" />
+            <div className="bg-[#1a1d27] border border-[#252840] rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-2.5">
+              <Loader size={14} className="text-green-400 animate-spin shrink-0" />
+              <span className="text-xs text-slate-500 animate-pulse">מחפש בתקנים וחושב...</span>
             </div>
           </div>
         )}
