@@ -23,7 +23,12 @@ function isGoodChunk(c) {
   return heCount / Math.max(t.length, 1) > 0.15
 }
 
-function searchStandards(query, topN = 8) {
+// MIN_SCORE: chunk must score at least this much to be injected.
+// Score=3 means only 1 keyword matched in text — too weak, likely off-topic.
+// Score=6 means 2 strong matches or 1 match + proximity bonus — genuinely relevant.
+const MIN_SCORE = 6
+
+function searchStandards(query, topN = 6) {
   const chunks   = getChunks().filter(isGoodChunk)
   if (!chunks.length) return []
   const keywords = query.split(/[\s,.\-()/\[\]"״'"'`]+/)
@@ -38,12 +43,10 @@ function searchStandards(query, topN = 8) {
       let score = 0
       for (const kw of keywords) {
         const lk = kw.toLowerCase()
-        // exact phrase in text: 3pts, in filename: 2pts
         if (text.includes(lk)) score += 3
         else if (text.split(/\s+/).some(t => t.startsWith(lk))) score += 1
         if (fileCtx.includes(lk)) score += 2
       }
-      // bonus: multiple keywords close together (within 50 chars)
       if (keywords.length >= 2) {
         const positions = keywords
           .map(kw => text.indexOf(kw.toLowerCase()))
@@ -56,7 +59,7 @@ function searchStandards(query, topN = 8) {
       }
       return { ...c, score }
     })
-    .filter(c => c.score > 0)
+    .filter(c => c.score >= MIN_SCORE)   // ← סף מינימלי — לא רלוונטי = לא מוזרק
     .sort((a, b) => b.score - a.score)
     .slice(0, topN)
 }
@@ -117,17 +120,11 @@ export default async function handler(req, res) {
 
     const systemPrompt = `אתה "מוח הבנייה" — מפקח בנייה בכיר ויועץ הנדסי עם ידע מעמיק בתקנים ורגולציה ישראלית.
 
-הידע שלך כולל:
-• ת"י 466 (ברזל לבניה), ת"י 118 (בטון), ת"י 1555 (ריצוף), ת"י 1090 (פלדת קונסטרוקציה), ת"י 12 (בניה), ת"י 931 (בידוד תרמי)
-• תקנות התכנון והבנייה (בקשה להיתר, ביקורת), חוק התכנון והבנייה תשכ"ה-1965
-• תקנות כיבוי אש, תקנות נגישות
-• דרישות בטון: כיסוי ברזל, ריכוז, עיגון, ערב מינימלי
-
 כללי תשובה — חובה:
-1. ענה תמיד בעברית
-2. אם יש קטעי תקן בהמשך — השתמש בהם כמקור ראשון. ציין שם קובץ + עמוד.
-3. אם אין קטעים רלוונטיים — ענה על בסיס הידע שלך, אבל אמור "לפי ידעי" ולא תציג כציטוט מדויק.
-4. אל תסביר שאין לך "גישה" — ענה ישירות.
+1. ענה תמיד בעברית.
+2. אם יש קטעי תקן למטה — השתמש בהם כמקור ראשון. ציין שם קובץ + עמוד.
+3. אם אין קטעים רלוונטיים מהתקנים — השתמש בחיפוש רשת כדי למצוא את המידע המדויק (תקנות בנייה, נבו, מכון התקנים). אל תנחש — חפש.
+4. לאחר חיפוש — ציין את המקור שמצאת (שם תקנה + סעיף).
 5. סווג ממצאים: קריטי / ממשי / מינורי. המלץ על פעולה.
 6. אל תכתוב טבלאות "מה יש לי / מה אין לי".${standardsContext}`
 
@@ -136,6 +133,7 @@ export default async function handler(req, res) {
       headers: {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'web-search-2025-03-05',
         'content-type': 'application/json',
       },
       body: JSON.stringify({
@@ -143,6 +141,7 @@ export default async function handler(req, res) {
         max_tokens: 4096,
         system: systemPrompt,
         messages: claudeMessages,
+        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
       }),
     })
 
@@ -152,7 +151,10 @@ export default async function handler(req, res) {
       return res.status(response.status).json({ error: data.error?.message || 'API error' })
     }
 
-    res.json({ content: data.content[0].text })
+    // content may include tool_use + tool_result blocks from web search — find the text
+    const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text)
+    const answer = textBlocks.join('\n').trim() || 'לא התקבלה תשובה'
+    res.json({ content: answer })
   } catch (err) {
     console.error('Handler crash:', err.message, err.stack)
     res.status(500).json({ error: err.message })
